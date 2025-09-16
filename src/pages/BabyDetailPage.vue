@@ -97,52 +97,10 @@
         </q-card>
       </div>
 
-      <!-- 圖表和統計 -->
-      <div class="row">
-        <!-- 成長曲線圖表 -->
-        <div class="row q-gutter-md q-mb-lg">
-          <!-- 身高圖表 -->
-          <div class="col-12 col-md-4">
-            <q-card>
-              <q-card-section>
-                <div class="text-h6 q-mb-md">
-                  <q-icon name="height" class="q-mr-sm" />
-                  身高變化
-                </div>
-                <canvas ref="heightChart" width="300" height="200"></canvas>
-              </q-card-section>
-            </q-card>
-          </div>
-
-          <!-- 體重圖表 -->
-          <div class="col-12 col-md-4">
-            <q-card>
-              <q-card-section>
-                <div class="text-h6 q-mb-md">
-                  <q-icon name="monitor_weight" class="q-mr-sm" />
-                  體重變化
-                </div>
-                <canvas ref="weightChart" width="300" height="200"></canvas>
-              </q-card-section>
-            </q-card>
-          </div>
-
-          <!-- 頭圍圖表 -->
-          <div class="col-12 col-md-4">
-            <q-card>
-              <q-card-section>
-                <div class="text-h6 q-mb-md">
-                  <q-icon name="psychology" class="q-mr-sm" />
-                  頭圍變化
-                </div>
-                <canvas ref="headChart" width="300" height="200"></canvas>
-              </q-card-section>
-            </q-card>
-          </div>
-        </div>
-
+      <!-- 右側：表格 -->
+      <div class="col-12 col-md-9">
         <!-- 資料紀錄表格 -->
-        <q-card>
+        <q-card class="q-mb-lg">
           <q-card-section>
             <div class="text-h6 q-mb-md">
               <q-icon name="trending_up" class="q-mr-sm" />
@@ -184,6 +142,47 @@
             </q-table>
           </q-card-section>
         </q-card>
+      </div>
+      <!-- 成長曲線圖表 -->
+      <div class="col-12 row q-gutter-md">
+        <!-- 身高圖表 -->
+        <div class="col-12 col-sm-4">
+          <q-card>
+            <q-card-section>
+              <div class="text-h6 q-mb-md">
+                <q-icon name="height" class="q-mr-sm" />
+                身高變化
+              </div>
+              <canvas ref="heightChart" width="300" height="200"></canvas>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- 體重圖表 -->
+        <div class="col-12 col-sm-4">
+          <q-card>
+            <q-card-section>
+              <div class="text-h6 q-mb-md">
+                <q-icon name="monitor_weight" class="q-mr-sm" />
+                體重變化
+              </div>
+              <canvas ref="weightChart" width="300" height="200"></canvas>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- 頭圍圖表 -->
+        <div class="col-12 col-sm-4">
+          <q-card>
+            <q-card-section>
+              <div class="text-h6 q-mb-md">
+                <q-icon name="psychology" class="q-mr-sm" />
+                頭圍變化
+              </div>
+              <canvas ref="headChart" width="300" height="200"></canvas>
+            </q-card-section>
+          </q-card>
+        </div>
       </div>
     </div>
 
@@ -628,16 +627,7 @@ function createChart(
   data: { x: Date; y: number }[],
   color: string,
   unit: string,
-  latestDate?: string,
 ): ChartType {
-  const dateText = latestDate
-    ? `(${new Date(latestDate).toLocaleDateString('zh-TW', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      })})`
-    : '';
-
   const config: ChartConfiguration = {
     type: 'line',
     data: {
@@ -665,7 +655,7 @@ function createChart(
           time: {
             unit: 'day',
             displayFormats: {
-              day: 'MM/dd',
+              day: 'YYYY/MM/dd',
             },
           },
           title: {
@@ -677,7 +667,7 @@ function createChart(
           beginAtZero: true,
           title: {
             display: true,
-            text: `${unit} ${dateText}`,
+            text: `${unit}`,
           },
         },
       },
@@ -730,15 +720,12 @@ function updateCharts() {
       if (heightChartInstance.value) {
         heightChartInstance.value.destroy();
       }
-      const latestHeight = heightData.length > 0 ? heightData[heightData.length - 1] : null;
-      const latestHeightDate = latestHeight?.x ? latestHeight.x.toISOString() : undefined;
       heightChartInstance.value = createChart(
         heightChart.value,
         '身高',
         heightData,
         '#2196F3',
         '身高 (cm)',
-        latestHeightDate,
       );
     }
 
@@ -747,15 +734,12 @@ function updateCharts() {
       if (weightChartInstance.value) {
         weightChartInstance.value.destroy();
       }
-      const latestWeight = weightData.length > 0 ? weightData[weightData.length - 1] : null;
-      const latestWeightDate = latestWeight?.x ? latestWeight.x.toISOString() : undefined;
       weightChartInstance.value = createChart(
         weightChart.value,
         '體重',
         weightData,
         '#4CAF50',
         '體重 (kg)',
-        latestWeightDate,
       );
     }
 
@@ -764,15 +748,12 @@ function updateCharts() {
       if (headChartInstance.value) {
         headChartInstance.value.destroy();
       }
-      const latestHead = headData.length > 0 ? headData[headData.length - 1] : null;
-      const latestHeadDate = latestHead?.x ? latestHead.x.toISOString() : undefined;
       headChartInstance.value = createChart(
         headChart.value,
         '頭圍',
         headData,
         '#FF9800',
         '頭圍 (cm)',
-        latestHeadDate,
       );
     }
   });
