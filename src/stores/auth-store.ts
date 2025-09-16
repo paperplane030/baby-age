@@ -24,7 +24,7 @@ export const useAuthStore = defineStore('auth', () => {
       // 檢查 URL 是否有 OAuth 回調參數
       const hash = window.location.hash;
       console.log('Full hash:', hash);
-      
+
       // 處理 hash 參數 - 移除開頭的 # 或 #/
       let hashString = hash;
       if (hashString.startsWith('#/')) {
@@ -32,7 +32,7 @@ export const useAuthStore = defineStore('auth', () => {
       } else if (hashString.startsWith('#')) {
         hashString = hashString.substring(1);
       }
-      
+
       const hashParams = new URLSearchParams(hashString);
       const hasOAuthParams =
         hashParams.has('access_token') ||
@@ -49,8 +49,13 @@ export const useAuthStore = defineStore('auth', () => {
         const refreshToken = hashParams.get('refresh_token');
         const expiresAt = hashParams.get('expires_at');
         const tokenType = hashParams.get('token_type');
-        
-        console.log('Extracted tokens:', { accessToken: !!accessToken, refreshToken: !!refreshToken, expiresAt, tokenType });
+
+        console.log('Extracted tokens:', {
+          accessToken: !!accessToken,
+          refreshToken: !!refreshToken,
+          expiresAt,
+          tokenType,
+        });
 
         // 立即清理 URL
         window.history.replaceState(
@@ -79,7 +84,7 @@ export const useAuthStore = defineStore('auth', () => {
             console.error('Manual session setup failed:', manualError);
           }
         }
-        
+
         // 如果手動設定失敗，等待 Supabase 自動處理
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
