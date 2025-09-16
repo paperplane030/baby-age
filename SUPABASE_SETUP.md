@@ -63,9 +63,20 @@ CREATE TABLE baby_records (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
+-- 建立 baby_statics 表格（寶寶成長統計）
+CREATE TABLE baby_statics (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  baby_id UUID REFERENCES baby_records(id) ON DELETE CASCADE NOT NULL,
+  height NUMERIC,
+  weight NUMERIC,
+  head_circle NUMERIC,
+  created_time TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
 -- 設定 RLS (Row Level Security)
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE baby_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE baby_statics ENABLE ROW LEVEL SECURITY;
 
 -- 建立安全政策
 CREATE POLICY "Users can view own profile" ON user_profiles
@@ -88,6 +99,35 @@ CREATE POLICY "Users can update own baby records" ON baby_records
 
 CREATE POLICY "Users can delete own baby records" ON baby_records
   FOR DELETE USING (auth.uid() = user_id);
+
+-- baby_statics 的安全政策
+CREATE POLICY "Users can view baby statics through baby records" ON baby_statics
+  FOR SELECT USING (
+    baby_id IN (
+      SELECT id FROM baby_records WHERE user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can insert baby statics for own babies" ON baby_statics
+  FOR INSERT WITH CHECK (
+    baby_id IN (
+      SELECT id FROM baby_records WHERE user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can update baby statics for own babies" ON baby_statics
+  FOR UPDATE USING (
+    baby_id IN (
+      SELECT id FROM baby_records WHERE user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can delete baby statics for own babies" ON baby_statics
+  FOR DELETE USING (
+    baby_id IN (
+      SELECT id FROM baby_records WHERE user_id = auth.uid()
+    )
+  );
 
 -- 建立自動更新 updated_at 的觸發器
 CREATE OR REPLACE FUNCTION update_updated_at_column()
