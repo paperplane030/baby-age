@@ -21,7 +21,7 @@
     </div>
 
     <!-- 主要內容 -->
-    <div v-else-if="baby" class="row q-gutter-lg">
+    <div v-else-if="baby" class="row q-gutter-y-lg">
       <!-- 左側：基本資料 -->
       <div class="col-12 col-md-3">
         <q-card class="q-pa-md">
@@ -98,7 +98,7 @@
       </div>
 
       <!-- 右側：表格 -->
-      <div class="col-12 col-md-9">
+      <div class="col-12">
         <!-- 資料紀錄表格 -->
         <q-card class="q-mb-lg">
           <q-card-section>
@@ -144,9 +144,9 @@
         </q-card>
       </div>
       <!-- 成長曲線圖表 -->
-      <div class="col-12 row q-gutter-md">
+      <div class="col-12 row no-wrap" style="gap: 12px">
         <!-- 身高圖表 -->
-        <div class="col-12 col-sm-4">
+        <div style="flex: 1">
           <q-card>
             <q-card-section>
               <div class="text-h6 q-mb-md">
@@ -159,7 +159,7 @@
         </div>
 
         <!-- 體重圖表 -->
-        <div class="col-12 col-sm-4">
+        <div style="flex: 1">
           <q-card>
             <q-card-section>
               <div class="text-h6 q-mb-md">
@@ -172,7 +172,7 @@
         </div>
 
         <!-- 頭圍圖表 -->
-        <div class="col-12 col-sm-4">
+        <div style="flex: 1">
           <q-card>
             <q-card-section>
               <div class="text-h6 q-mb-md">
