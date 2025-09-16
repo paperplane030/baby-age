@@ -1,9 +1,17 @@
 <template>
   <q-page class="q-pa-md">
     <!-- 頁面標題和返回按鈕 -->
-    <div class="row items-center q-mb-lg">
-      <q-btn flat round dense icon="arrow_back" @click="$router.push('/')" class="q-mr-md" />
-      <div class="text-h4">{{ baby?.baby_name || '寶寶詳細資料' }}</div>
+    <div class="row items-center justify-between q-mb-lg">
+      <div class="row items-center">
+        <q-btn flat round dense icon="arrow_back" @click="$router.push('/')" class="q-mr-md" />
+        <div class="text-h4">{{ baby?.baby_name || '寶寶詳細資料' }}</div>
+      </div>
+      <q-btn
+        color="accent"
+        icon="monitor_weight"
+        label="新增資料"
+        @click="showStaticDialog = true"
+      />
     </div>
 
     <!-- 載入中狀態 -->
@@ -89,12 +97,7 @@
                 @click="editBaby"
                 class="q-mr-sm"
               />
-              <q-btn
-                color="accent"
-                icon="monitor_weight"
-                label="新增統計"
-                @click="showAddStaticDialog = true"
-              />
+              <q-btn color="primary" icon="add" label="新增資料" @click="showStaticDialog = true" />
             </div>
           </q-card-section>
         </q-card>
@@ -106,7 +109,7 @@
           <q-card-section>
             <div class="text-h6 q-mb-md">
               <q-icon name="trending_up" class="q-mr-sm" />
-              成長統計記錄
+              資料紀錄
             </div>
 
             <!-- 統計表格 -->
@@ -116,7 +119,7 @@
               row-key="id"
               :loading="staticsLoading"
               :rows-per-page-options="[10, 20, 50]"
-              :no-data-label="'暫無統計記錄'"
+              :no-data-label="'暫無資料紀錄'"
               class="q-mt-md"
             >
               <!-- 自定義行的樣式和內容 -->
@@ -142,77 +145,13 @@
                 </q-td>
               </template>
             </q-table>
-
-            <!-- 新增統計按鈕 -->
-            <div class="q-mt-md text-center">
-              <q-btn
-                color="primary"
-                icon="add"
-                label="新增統計記錄"
-                @click="showAddStaticDialog = true"
-              />
-            </div>
           </q-card-section>
         </q-card>
       </div>
     </div>
 
     <!-- 新增統計對話框 -->
-    <q-dialog v-model="showAddStaticDialog">
-      <q-card style="min-width: 400px">
-        <q-card-section>
-          <div class="text-h6">新增身高體重記錄</div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-none">
-          <div class="row q-gutter-md">
-            <div class="col">
-              <q-input
-                v-model.number="staticForm.height"
-                label="身高 (公分)"
-                type="number"
-                dense
-                suffix="cm"
-                :rules="[(val) => val === null || val === undefined || val > 0 || '請輸入有效數值']"
-              />
-            </div>
-            <div class="col">
-              <q-input
-                v-model.number="staticForm.weight"
-                label="體重 (公斤)"
-                type="number"
-                dense
-                suffix="kg"
-                step="0.1"
-                :rules="[(val) => val === null || val === undefined || val > 0 || '請輸入有效數值']"
-              />
-            </div>
-          </div>
-          <div class="q-mt-md">
-            <q-input
-              v-model.number="staticForm.headCircle"
-              label="頭圍 (公分)"
-              type="number"
-              dense
-              suffix="cm"
-              step="0.1"
-              :rules="[(val) => val === null || val === undefined || val > 0 || '請輸入有效數值']"
-            />
-          </div>
-        </q-card-section>
-
-        <q-card-actions align="right" class="text-primary">
-          <q-btn flat label="取消" @click="closeAddStaticDialog" />
-          <q-btn
-            flat
-            label="新增"
-            @click="saveStatic"
-            :loading="staticsLoading"
-            :disable="!hasValidStaticData"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <BabyStaticDialog v-model="showStaticDialog" :baby="baby" @saved="onStaticSaved" />
   </q-page>
 </template>
 
@@ -223,6 +162,7 @@ import { useDatabaseStore } from 'src/stores/database-store';
 import { useBabyStaticsStore } from 'src/stores/baby-statics-store';
 import { useQuasar } from 'quasar';
 import type { BabyRecord, BabyStatic } from 'src/supabase';
+import BabyStaticDialog from 'src/components/BabyStaticDialog.vue';
 
 // 路由和通知
 const route = useRoute();
@@ -237,7 +177,7 @@ const babyStaticsStore = useBabyStaticsStore();
 const baby = ref<BabyRecord | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
-const showAddStaticDialog = ref(false);
+const showStaticDialog = ref(false);
 
 // 統計表單
 const staticForm = ref({
@@ -424,12 +364,16 @@ async function saveStatic() {
 }
 
 function closeAddStaticDialog() {
-  showAddStaticDialog.value = false;
+  showStaticDialog.value = false;
   staticForm.value = {
     height: null,
     weight: null,
     headCircle: null,
   };
+}
+
+function onStaticSaved() {
+  showStaticDialog.value = false;
 }
 
 function confirmDeleteStatic(staticId: string) {
