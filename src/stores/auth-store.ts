@@ -25,15 +25,24 @@ export const useAuthStore = defineStore('auth', () => {
       const hash = window.location.hash;
       console.log('Full hash:', hash);
 
-      // 處理 hash 參數 - 移除開頭的 # 或 #/
+      // 特殊處理：OAuth 參數可能在 #/#access_token 格式中
       let hashString = hash;
-      if (hashString.startsWith('#/')) {
-        hashString = hashString.substring(2);
-      } else if (hashString.startsWith('#')) {
-        hashString = hashString.substring(1);
-      }
+      let hashParams = new URLSearchParams();
 
-      const hashParams = new URLSearchParams(hashString);
+      if (hashString.includes('#access_token') || hashString.includes('#refresh_token')) {
+        // 處理 #/#access_token=... 格式
+        const oauthPart = hashString.substring(hashString.indexOf('#access_token') + 1);
+        console.log('OAuth part:', oauthPart);
+        hashParams = new URLSearchParams(oauthPart);
+      } else {
+        // 一般的 hash 參數處理
+        if (hashString.startsWith('#/')) {
+          hashString = hashString.substring(2);
+        } else if (hashString.startsWith('#')) {
+          hashString = hashString.substring(1);
+        }
+        hashParams = new URLSearchParams(hashString);
+      }
       const hasOAuthParams =
         hashParams.has('access_token') ||
         hashParams.has('refresh_token') ||
