@@ -94,7 +94,7 @@ onMounted(() => {
       type: 'info',
       message: '正在處理登入...',
       position: 'top',
-      timeout: 2000
+      timeout: 2000,
     });
   }
 });

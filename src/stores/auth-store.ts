@@ -25,17 +25,21 @@ export const useAuthStore = defineStore('auth', () => {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
-      
+
       if (accessToken && refreshToken) {
         // 如果有認證參數，清理 URL
-        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
-        
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname + window.location.search,
+        );
+
         // 手動設定 session
         const { data, error: sessionError } = await supabase.auth.setSession({
           access_token: accessToken,
-          refresh_token: refreshToken
+          refresh_token: refreshToken,
         });
-        
+
         if (sessionError) {
           console.error('Session error:', sessionError);
         } else if (data.user) {
