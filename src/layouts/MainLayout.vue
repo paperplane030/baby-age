@@ -158,6 +158,50 @@
             class="q-mt-sm"
             :rules="[(val) => val || '請選擇出生日期']"
           />
+
+          <!-- 新增出生週數和天數欄位 -->
+          <div class="row q-gutter-md q-mt-sm">
+            <div class="col">
+              <q-input
+                v-model.number="babyForm.birthWeek"
+                label="出生週數"
+                type="number"
+                dense
+                suffix="週"
+                hint="懷孕時的週數 (20-45週)"
+                :rules="[
+                  (val) =>
+                    val === null ||
+                    val === undefined ||
+                    (val >= 20 && val <= 45) ||
+                    '請輸入 20-45 之間的週數',
+                ]"
+              />
+            </div>
+            <div class="col">
+              <q-select
+                v-model="babyForm.birthDay"
+                label="出生天數"
+                dense
+                :options="[
+                  { label: '週日', value: 0 },
+                  { label: '週一', value: 1 },
+                  { label: '週二', value: 2 },
+                  { label: '週三', value: 3 },
+                  { label: '週四', value: 4 },
+                  { label: '週五', value: 5 },
+                  { label: '週六', value: 6 },
+                ]"
+                option-label="label"
+                option-value="value"
+                emit-value
+                map-options
+                clearable
+                hint="該週的第幾天"
+              />
+            </div>
+          </div>
+
           <q-input
             v-model="babyForm.notes"
             label="備註"
@@ -278,6 +322,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from 'src/stores/auth-store';
 import { useDatabaseStore } from 'src/stores/database-store';
 import { useBabyStaticsStore } from 'src/stores/baby-statics-store';
@@ -289,6 +334,7 @@ const authStore = useAuthStore();
 const databaseStore = useDatabaseStore();
 const babyStaticsStore = useBabyStaticsStore();
 const $q = useQuasar();
+const router = useRouter();
 
 // 狀態
 const leftDrawerOpen = ref(false);
@@ -302,6 +348,8 @@ const selectedBabyForStatic = ref<BabyRecord | null>(null);
 const babyForm = ref({
   name: '',
   birthDate: '',
+  birthWeek: null as number | null,
+  birthDay: null as number | null,
   notes: '',
 });
 
@@ -339,7 +387,8 @@ function formatDate(dateString: string): string {
 // 選擇寶寶
 function selectBaby(babyId: string) {
   selectedBabyId.value = babyId;
-  // 可以在這裡添加額外的邏輯，比如更新頁面內容
+  // 導航到寶寶詳細頁面
+  void router.push(`/baby/${babyId}`);
 }
 
 // 編輯寶寶
@@ -348,6 +397,8 @@ function editBaby(baby: BabyRecord) {
   babyForm.value = {
     name: baby.baby_name,
     birthDate: baby.birth_date,
+    birthWeek: baby.birth_week || null,
+    birthDay: baby.birth_day || null,
     notes: baby.notes || '',
   };
   showAddBabyDialog.value = true;
@@ -366,22 +417,45 @@ async function saveBaby() {
   try {
     if (editingBaby.value) {
       // 更新現有寶寶
-      await databaseStore.updateBabyRecord(editingBaby.value.id, {
+      const updateData: Record<string, unknown> = {
         baby_name: babyForm.value.name,
         birth_date: babyForm.value.birthDate,
         notes: babyForm.value.notes,
-      });
+      };
+
+      if (babyForm.value.birthWeek !== null) {
+        updateData.birth_week = babyForm.value.birthWeek;
+      }
+      if (babyForm.value.birthDay !== null) {
+        updateData.birth_day = babyForm.value.birthDay;
+      }
+
+      await databaseStore.updateBabyRecord(
+        editingBaby.value.id,
+        updateData as Partial<Omit<BabyRecord, 'id' | 'user_id' | 'created_at' | 'updated_at'>>,
+      );
       $q.notify({
         type: 'positive',
         message: '寶寶資料已更新',
       });
     } else {
       // 新增寶寶
-      await databaseStore.createBabyRecord({
+      const createData: Record<string, unknown> = {
         baby_name: babyForm.value.name,
         birth_date: babyForm.value.birthDate,
         notes: babyForm.value.notes,
-      });
+      };
+
+      if (babyForm.value.birthWeek !== null) {
+        createData.birth_week = babyForm.value.birthWeek;
+      }
+      if (babyForm.value.birthDay !== null) {
+        createData.birth_day = babyForm.value.birthDay;
+      }
+
+      await databaseStore.createBabyRecord(
+        createData as Omit<BabyRecord, 'id' | 'user_id' | 'created_at' | 'updated_at'>,
+      );
       $q.notify({
         type: 'positive',
         message: '寶寶已新增成功',
@@ -404,6 +478,8 @@ function closeDialog() {
   babyForm.value = {
     name: '',
     birthDate: '',
+    birthWeek: null,
+    birthDay: null,
     notes: '',
   };
 }

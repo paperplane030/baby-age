@@ -67,14 +67,22 @@ export const useDatabaseStore = defineStore('database', () => {
       loading.value = true;
       error.value = null;
 
-      const newRecord = {
+      // 準備要插入的資料，過濾掉 null 值
+      const insertData: Record<string, unknown> = {
         ...recordData,
         user_id: authStore.user.id,
       };
 
+      // 移除 null 值，避免傳送到資料庫
+      Object.keys(insertData).forEach((key) => {
+        if (insertData[key] === null) {
+          delete insertData[key];
+        }
+      });
+
       const { data, error: insertError } = await supabase
         .from('baby_records')
-        .insert(newRecord)
+        .insert(insertData)
         .select()
         .single();
 
@@ -108,9 +116,17 @@ export const useDatabaseStore = defineStore('database', () => {
       loading.value = true;
       error.value = null;
 
+      // 準備更新資料，過濾掉 null 值
+      const updateData: Record<string, unknown> = { ...updates };
+      Object.keys(updateData).forEach((key) => {
+        if (updateData[key] === null) {
+          delete updateData[key];
+        }
+      });
+
       const { data, error: updateError } = await supabase
         .from('baby_records')
-        .update(updates)
+        .update(updateData)
         .eq('id', id)
         .eq('user_id', authStore.user.id) // 確保只能更新自己的記錄
         .select()

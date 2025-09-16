@@ -35,6 +35,8 @@ export interface BabyRecord {
   user_id: string;
   baby_name: string;
   birth_date: string;
+  birth_week?: number; // 出生週數（懷孕週數）
+  birth_day?: number; // 出生天數（該週的第幾天，0=週日，1=週一，以此類推）
   notes?: string;
   created_at: string;
   updated_at: string;

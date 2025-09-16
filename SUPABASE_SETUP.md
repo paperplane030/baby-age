@@ -58,6 +58,8 @@ CREATE TABLE baby_records (
   user_id UUID REFERENCES auth.users(id) NOT NULL,
   baby_name VARCHAR NOT NULL,
   birth_date DATE NOT NULL,
+  birth_week INTEGER, -- 出生週數 (懷孕週數)
+  birth_day INTEGER, -- 出生天數 (該週的第幾天，0-6)
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
