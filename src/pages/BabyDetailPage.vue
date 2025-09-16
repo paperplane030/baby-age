@@ -186,14 +186,24 @@
               />
             </div>
             <div class="col">
-              <q-input
-                v-model.number="editForm.birthDay"
+              <q-select
+                v-model="editForm.birthDay"
                 label="出生天數"
-                type="number"
                 dense
-                min="0"
-                max="6"
-                hint="0-6的數字"
+                :options="[
+                  { label: '0', value: 0 },
+                  { label: '1', value: 1 },
+                  { label: '2', value: 2 },
+                  { label: '3', value: 3 },
+                  { label: '4', value: 4 },
+                  { label: '5', value: 5 },
+                  { label: '6', value: 6 },
+                ]"
+                option-label="label"
+                option-value="value"
+                emit-value
+                map-options
+                clearable
               />
             </div>
           </div>
@@ -265,7 +275,10 @@ const babyStatics = computed(() => {
   return babyStaticsStore.getStaticsByBabyId(baby.value.id);
 });
 
-const staticsLoading = computed(() => babyStaticsStore.loading);
+const staticsLoading = computed(() => {
+  // 只有在有寶寶資料且正在載入統計資料時才顯示 loading
+  return !!(baby.value && babyStaticsStore.loading && babyStatics.value.length === 0);
+});
 
 const hasValidStaticData = computed(() => {
   return (
@@ -357,31 +370,58 @@ function calculateCorrectedAge(): string {
     return calculateAge(); // 如果沒有週數資料，回傳一般年齡
   }
 
-  // 計算矯正年齡：從預產期 (40週) 開始計算
-  const fullTermWeeks = 40;
-  const preTermWeeks = baby.value.birth_week;
-  const prematureWeeks = fullTermWeeks - preTermWeeks;
-
   const birthDate = new Date(baby.value.birth_date);
-  const correctedBirthDate = new Date(
-    birthDate.getTime() + prematureWeeks * 7 * 24 * 60 * 60 * 1000,
-  );
   const today = new Date();
 
-  if (correctedBirthDate > today) {
-    return '尚未到預產期';
+  // 計算出生胎齡（天數）
+  // 胎齡 = 出生週數*7+出生天數
+  const birthWeeks = baby.value.birth_week;
+  const birthDays = baby.value.birth_day || 0;
+  const gestationalAgeInDays = birthWeeks * 7 + birthDays;
+
+  // 足月基準: 40週 (280天)
+  const fullTermDays = 280;
+
+  // 計算出生後天數
+  const diffTime = today.getTime() - birthDate.getTime();
+  const daysAfterBirth = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  // 矯正年齡 = 出生胎齡 + 出生後天數
+  const correctedAgeInDays = gestationalAgeInDays + daysAfterBirth;
+
+  // 如果還沒達到足月（280天）
+  if (correctedAgeInDays < fullTermDays) {
+    // 未達足月時，直接顯示矯正年齡的月和天
+    const months = Math.floor(correctedAgeInDays / 30);
+    const days = correctedAgeInDays % 30;
+
+    if (months > 0) {
+      return `${months} 個月 ${days} 天`;
+    } else {
+      return `${days} 天`;
+    }
   }
 
-  const diffTime = today.getTime() - correctedBirthDate.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  // 已達到或超過足月，計算足月後的年齡
+  const daysAfterFullTerm = correctedAgeInDays - fullTermDays;
+  const months = Math.floor(daysAfterFullTerm / 30);
+  const days = daysAfterFullTerm % 30;
 
-  const months = Math.floor(diffDays / 30);
-  const days = diffDays % 30;
-
-  if (months > 0) {
-    return `${months} 個月 ${days} 天 (矯正)`;
+  // 足月的話顯示足月幾月幾天，不足月的話僅顯示幾月幾天
+  if (gestationalAgeInDays >= fullTermDays) {
+    // 原本就是足月出生
+    if (months > 0) {
+      return `${months} 個月 ${days} 天`;
+    } else {
+      return `${days} 天`;
+    }
   } else {
-    return `${days} 天 (矯正)`;
+    // 早產兒，顯示矯正年齡
+    if (months > 0) {
+      return `足月 ${months} 個月 ${days} 天`;
+    } else {
+      return `足月 ${days} 天`;
+    }
   }
 }
 
