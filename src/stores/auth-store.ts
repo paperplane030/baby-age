@@ -22,7 +22,18 @@ export const useAuthStore = defineStore('auth', () => {
       loading.value = true;
 
       // 檢查 URL 是否有 OAuth 回調參數
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const hash = window.location.hash;
+      console.log('Full hash:', hash);
+      
+      // 處理 hash 參數 - 移除開頭的 # 或 #/
+      let hashString = hash;
+      if (hashString.startsWith('#/')) {
+        hashString = hashString.substring(2);
+      } else if (hashString.startsWith('#')) {
+        hashString = hashString.substring(1);
+      }
+      
+      const hashParams = new URLSearchParams(hashString);
       const hasOAuthParams =
         hashParams.has('access_token') ||
         hashParams.has('refresh_token') ||
@@ -33,23 +44,52 @@ export const useAuthStore = defineStore('auth', () => {
       console.log('Hash params:', Object.fromEntries(hashParams.entries()));
 
       if (hasOAuthParams) {
-        // 如果有 OAuth 參數，清理 URL 並讓 Supabase 自動處理
+        // 手動提取 tokens
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const expiresAt = hashParams.get('expires_at');
+        const tokenType = hashParams.get('token_type');
+        
+        console.log('Extracted tokens:', { accessToken: !!accessToken, refreshToken: !!refreshToken, expiresAt, tokenType });
+
+        // 立即清理 URL
         window.history.replaceState(
           {},
           document.title,
           window.location.pathname + window.location.search,
         );
 
-        // 等待一小段時間讓 Supabase 處理回調
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        // 如果有 access_token，手動設定 session
+        if (accessToken && refreshToken) {
+          try {
+            const { data, error: sessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+
+            if (sessionError) {
+              console.error('Manual session setup error:', sessionError);
+            } else if (data.user) {
+              console.log('Manual session setup successful:', data.user.email);
+              user.value = data.user;
+              await loadUserProfile();
+              return; // 成功設定，提早返回
+            }
+          } catch (manualError) {
+            console.error('Manual session setup failed:', manualError);
+          }
+        }
+        
+        // 如果手動設定失敗，等待 Supabase 自動處理
+        await new Promise((resolve) => setTimeout(resolve, 200));
       }
 
-      // 取得當前 session (這會觸發 Supabase 的自動檢測)
+      // 取得當前 session
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
-      console.log('Current session:', session);
+      console.log('Current session after processing:', session);
 
       if (session?.user) {
         user.value = session.user;

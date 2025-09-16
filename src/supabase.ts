@@ -13,10 +13,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true,
-    flowType: 'implicit', // 回到 implicit 流程
+    detectSessionInUrl: false, // 手動處理 URL 中的 session
+    flowType: 'implicit',
     storage: window.localStorage,
-    debug: true, // 啟用除錯模式
+    debug: true,
   },
 });
 
