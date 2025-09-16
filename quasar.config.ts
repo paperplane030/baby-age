@@ -43,7 +43,7 @@ export default defineConfig((/* ctx */) => {
         // extendTsConfig (tsConfig) {}
       },
 
-      vueRouterMode: 'history', // available values: 'hash', 'history'
+      vueRouterMode: 'hash', // available values: 'hash', 'history'
       // vueRouterBase,
       // vueDevtools,
       // vueOptionsAPI: false,
@@ -54,8 +54,8 @@ export default defineConfig((/* ctx */) => {
       // analyze: true,
       env: {
         // 將環境變數傳遞給應用
-        SUPABASE_URL: process.env.VITE_SUPABASE_URL,
-        SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
+        VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL,
+        VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
       },
       // rawDefine: {}
       // ignorePublicFolder: true,
