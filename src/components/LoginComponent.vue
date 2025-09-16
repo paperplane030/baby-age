@@ -88,13 +88,13 @@ const databaseStore = useDatabaseStore();
 // 組件掛載時檢查 URL 是否有認證參數
 onMounted(() => {
   const hash = window.location.hash;
-  if (hash.includes('access_token') || hash.includes('error')) {
+  if (hash.includes('access_token') || hash.includes('refresh_token') || hash.includes('error')) {
     // 顯示處理中的訊息
     $q.notify({
       type: 'info',
       message: '正在處理登入...',
       position: 'top',
-      timeout: 2000,
+      timeout: 3000,
     });
   }
 });

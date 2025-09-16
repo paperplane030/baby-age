@@ -14,8 +14,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    flowType: 'implicit', // 適用於 SPA 應用
-    storage: window.localStorage, // 明確指定存儲方式
+    flowType: 'implicit', // 回到 implicit 流程
+    storage: window.localStorage,
+    debug: true, // 啟用除錯模式
   },
 });
 

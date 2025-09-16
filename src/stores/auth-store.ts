@@ -21,38 +21,35 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       loading.value = true;
 
-      // 處理 OAuth 回調 - 檢查 URL 中是否有認證參數
+      // 檢查 URL 是否有 OAuth 回調參數
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token');
-      console.log(accessToken, refreshToken);
-      if (accessToken && refreshToken) {
-        // 如果有認證參數，清理 URL
+      const hasOAuthParams =
+        hashParams.has('access_token') ||
+        hashParams.has('refresh_token') ||
+        hashParams.has('token_type') ||
+        hashParams.has('error');
+
+      console.log('OAuth callback detected:', hasOAuthParams);
+      console.log('Hash params:', Object.fromEntries(hashParams.entries()));
+
+      if (hasOAuthParams) {
+        // 如果有 OAuth 參數，清理 URL 並讓 Supabase 自動處理
         window.history.replaceState(
           {},
           document.title,
           window.location.pathname + window.location.search,
         );
 
-        // 手動設定 session
-        const { data, error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-        } else if (data.user) {
-          user.value = data.user;
-          await loadUserProfile();
-          return; // 提早返回，避免重複處理
-        }
+        // 等待一小段時間讓 Supabase 處理回調
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
-      // 取得當前 session
+      // 取得當前 session (這會觸發 Supabase 的自動檢測)
       const {
         data: { session },
       } = await supabase.auth.getSession();
+
+      console.log('Current session:', session);
 
       if (session?.user) {
         user.value = session.user;
