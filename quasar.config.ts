@@ -43,7 +43,7 @@ export default defineConfig((/* ctx */) => {
         // extendTsConfig (tsConfig) {}
       },
 
-      vueRouterMode: 'hash', // available values: 'hash', 'history'
+      vueRouterMode: 'history', // available values: 'hash', 'history'
       // vueRouterBase,
       // vueDevtools,
       // vueOptionsAPI: false,
@@ -52,7 +52,11 @@ export default defineConfig((/* ctx */) => {
 
       publicPath: process.env.NODE_ENV === 'production' ? '/baby-age/' : '/',
       // analyze: true,
-      // env: {},
+      env: {
+        // 將環境變數傳遞給應用
+        SUPABASE_URL: process.env.VITE_SUPABASE_URL,
+        SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
+      },
       // rawDefine: {}
       // ignorePublicFolder: true,
       // minify: false,
@@ -62,22 +66,7 @@ export default defineConfig((/* ctx */) => {
       // extendViteConf (viteConf) {},
       // viteVuePluginOptions: {},
 
-      vitePlugins: [
-        [
-          '@intlify/vite-plugin-vue-i18n',
-          {
-            // if you want to use Vue I18n Legacy API, you need to set `compositionOnly: false`
-            // compositionOnly: false,
-
-            // if you want to use named tokens in your Vue I18n messages, such as 'Hello {name}',
-            // you need to set `runtimeOnly: false`
-            // runtimeOnly: false,
-
-            // you need to set i18n resource including paths !
-            include: [],
-          },
-        ],
-      ],
+      // vitePlugins: [],
     },
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#devServer
@@ -88,7 +77,16 @@ export default defineConfig((/* ctx */) => {
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#framework
     framework: {
-      config: {},
+      config: {
+        notify: {
+          position: 'top',
+          timeout: 3000,
+        },
+        loading: {
+          color: 'primary',
+          message: '載入中...',
+        },
+      },
 
       // iconSet: 'material-icons', // Quasar icon set
       // lang: 'en-US', // Quasar language pack
@@ -101,7 +99,7 @@ export default defineConfig((/* ctx */) => {
       // directives: [],
 
       // Quasar plugins
-      plugins: [],
+      plugins: ['Notify', 'Loading', 'LocalStorage', 'SessionStorage'],
     },
 
     // animations: 'all', // --- includes all animations
@@ -131,7 +129,7 @@ export default defineConfig((/* ctx */) => {
 
     // https://v2.quasar.dev/quasar-cli-vite/developing-pwa/configuring-pwa
     pwa: {
-      workboxMode: 'generateSW', // or 'injectManifest'
+      workboxMode: 'GenerateSW', // or 'InjectManifest'
       injectPwaMetaTags: true,
       swFilename: 'sw.js',
       manifestFilename: 'manifest.json',
@@ -182,8 +180,7 @@ export default defineConfig((/* ctx */) => {
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/developing-browser-extensions/configuring-bex
     bex: {
-      contentScripts: ['my-content-script'],
-
+      // contentScripts: ['my-content-script'],
       // extendBexScriptsConf (esbuildConf) {}
       // extendBexManifestJson (json) {}
     },
