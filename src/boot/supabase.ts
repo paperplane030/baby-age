@@ -7,6 +7,7 @@ export default boot(async () => {
 
   // 初始化認證狀態
   try {
+    console.log('初始化認證狀態');
     await authStore.initAuth();
   } catch (error) {
     console.error('Failed to initialize auth:', error);
