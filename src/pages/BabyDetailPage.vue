@@ -23,7 +23,7 @@
     <!-- 主要內容 -->
     <div v-else-if="baby" class="row q-gutter-lg">
       <!-- 左側：基本資料 -->
-      <div class="col-12 col-md-4">
+      <div class="col-12 col-md-3">
         <q-card class="q-pa-md">
           <q-card-section>
             <div class="text-h6 q-mb-md">
@@ -97,8 +97,51 @@
         </q-card>
       </div>
 
-      <!-- 右側：成長統計 -->
-      <div class="col-12 col-md-8">
+      <!-- 右側：圖表和統計 -->
+      <div class="col-12 col-md-9">
+        <!-- 成長曲線圖表 -->
+        <div class="row q-gutter-md q-mb-lg">
+          <!-- 身高圖表 -->
+          <div class="col-12 col-md-4">
+            <q-card>
+              <q-card-section>
+                <div class="text-h6 q-mb-md">
+                  <q-icon name="height" class="q-mr-sm" />
+                  身高變化
+                </div>
+                <canvas ref="heightChart" width="300" height="200"></canvas>
+              </q-card-section>
+            </q-card>
+          </div>
+
+          <!-- 體重圖表 -->
+          <div class="col-12 col-md-4">
+            <q-card>
+              <q-card-section>
+                <div class="text-h6 q-mb-md">
+                  <q-icon name="monitor_weight" class="q-mr-sm" />
+                  體重變化
+                </div>
+                <canvas ref="weightChart" width="300" height="200"></canvas>
+              </q-card-section>
+            </q-card>
+          </div>
+
+          <!-- 頭圍圖表 -->
+          <div class="col-12 col-md-4">
+            <q-card>
+              <q-card-section>
+                <div class="text-h6 q-mb-md">
+                  <q-icon name="psychology" class="q-mr-sm" />
+                  頭圍變化
+                </div>
+                <canvas ref="headChart" width="300" height="200"></canvas>
+              </q-card-section>
+            </q-card>
+          </div>
+        </div>
+
+        <!-- 資料紀錄表格 -->
         <q-card>
           <q-card-section>
             <div class="text-h6 q-mb-md">
@@ -228,13 +271,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, nextTick, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useDatabaseStore } from 'src/stores/database-store';
 import { useBabyStaticsStore } from 'src/stores/baby-statics-store';
 import { useQuasar } from 'quasar';
 import type { BabyRecord, BabyStatic } from 'src/supabase';
 import BabyStaticDialog from 'src/components/BabyStaticDialog.vue';
+import { Chart, registerables, type ChartConfiguration, type Chart as ChartType } from 'chart.js';
+import 'chartjs-adapter-date-fns';
 
 // 路由和通知
 const route = useRoute();
@@ -245,12 +290,25 @@ const $q = useQuasar();
 const databaseStore = useDatabaseStore();
 const babyStaticsStore = useBabyStaticsStore();
 
+// 註冊 Chart.js 組件
+Chart.register(...registerables);
+
 // 狀態
 const baby = ref<BabyRecord | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const showStaticDialog = ref(false);
 const showEditDialog = ref(false);
+
+// 圖表 refs
+const heightChart = ref<HTMLCanvasElement>();
+const weightChart = ref<HTMLCanvasElement>();
+const headChart = ref<HTMLCanvasElement>();
+
+// 圖表實例
+const heightChartInstance = ref<ChartType>();
+const weightChartInstance = ref<ChartType>();
+const headChartInstance = ref<ChartType>();
 
 // 統計表單
 const staticForm = ref({
@@ -563,6 +621,141 @@ function confirmDeleteStatic(staticId: string) {
   });
 }
 
+// 圖表相關函數
+function createChart(
+  canvas: HTMLCanvasElement,
+  label: string,
+  data: { x: Date; y: number }[],
+  color: string,
+  unit: string,
+): ChartType {
+  const config: ChartConfiguration = {
+    type: 'line',
+    data: {
+      datasets: [
+        {
+          label: label,
+          data: data as any,
+          borderColor: color,
+          backgroundColor: color + '20',
+          fill: false,
+          tension: 0.4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          type: 'time',
+          time: {
+            unit: 'day',
+            displayFormats: {
+              day: 'MM/dd',
+            },
+          },
+          title: {
+            display: true,
+            text: '日期',
+          },
+        },
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: unit,
+          },
+        },
+      },
+      plugins: {
+        legend: {
+          display: false,
+        },
+      },
+    },
+  };
+
+  return new Chart(canvas, config);
+}
+
+function updateCharts() {
+  if (!baby.value || !babyStatics.value.length) return;
+
+  nextTick(() => {
+    // 準備圖表資料
+    const sortedData = [...babyStatics.value].sort(
+      (a, b) => new Date(a.created_time).getTime() - new Date(b.created_time).getTime(),
+    );
+
+    // 身高資料
+    const heightData = sortedData
+      .filter((stat) => stat.height !== null && stat.height !== undefined)
+      .map((stat) => ({
+        x: new Date(stat.created_time),
+        y: stat.height!,
+      }));
+
+    // 體重資料
+    const weightData = sortedData
+      .filter((stat) => stat.weight !== null && stat.weight !== undefined)
+      .map((stat) => ({
+        x: new Date(stat.created_time),
+        y: stat.weight!,
+      }));
+
+    // 頭圍資料
+    const headData = sortedData
+      .filter((stat) => stat.head_circle !== null && stat.head_circle !== undefined)
+      .map((stat) => ({
+        x: new Date(stat.created_time),
+        y: stat.head_circle!,
+      }));
+
+    // 更新或創建身高圖表
+    if (heightChart.value) {
+      if (heightChartInstance.value) {
+        heightChartInstance.value.destroy();
+      }
+      heightChartInstance.value = createChart(
+        heightChart.value,
+        '身高',
+        heightData,
+        '#2196F3',
+        '身高 (cm)',
+      );
+    }
+
+    // 更新或創建體重圖表
+    if (weightChart.value) {
+      if (weightChartInstance.value) {
+        weightChartInstance.value.destroy();
+      }
+      weightChartInstance.value = createChart(
+        weightChart.value,
+        '體重',
+        weightData,
+        '#4CAF50',
+        '體重 (kg)',
+      );
+    }
+
+    // 更新或創建頭圍圖表
+    if (headChart.value) {
+      if (headChartInstance.value) {
+        headChartInstance.value.destroy();
+      }
+      headChartInstance.value = createChart(
+        headChart.value,
+        '頭圍',
+        headData,
+        '#FF9800',
+        '頭圍 (cm)',
+      );
+    }
+  });
+}
+
 // 初始化
 onMounted(async () => {
   try {
@@ -580,6 +773,10 @@ onMounted(async () => {
     if (baby.value) {
       await babyStaticsStore.loadBabyStatics(baby.value.id);
     }
+
+    // 初始化圖表
+    await nextTick();
+    updateCharts();
   } catch (err) {
     console.error('Load data error:', err);
     error.value = '載入資料失敗';
@@ -587,6 +784,15 @@ onMounted(async () => {
     loading.value = false;
   }
 });
+
+// 監聽統計資料變化，更新圖表
+watch(
+  () => babyStatics.value,
+  () => {
+    updateCharts();
+  },
+  { deep: true },
+);
 </script>
 
 <style scoped>
