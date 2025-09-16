@@ -184,20 +184,19 @@
                 label="出生天數"
                 dense
                 :options="[
-                  { label: '週日', value: 0 },
-                  { label: '週一', value: 1 },
-                  { label: '週二', value: 2 },
-                  { label: '週三', value: 3 },
-                  { label: '週四', value: 4 },
-                  { label: '週五', value: 5 },
-                  { label: '週六', value: 6 },
+                  { label: '0', value: 0 },
+                  { label: '1', value: 1 },
+                  { label: '2', value: 2 },
+                  { label: '3', value: 3 },
+                  { label: '4', value: 4 },
+                  { label: '5', value: 5 },
+                  { label: '6', value: 6 },
                 ]"
                 option-label="label"
                 option-value="value"
                 emit-value
                 map-options
                 clearable
-                hint="該週的第幾天"
               />
             </div>
           </div>

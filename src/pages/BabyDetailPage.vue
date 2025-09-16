@@ -6,12 +6,6 @@
         <q-btn flat round dense icon="arrow_back" @click="$router.push('/')" class="q-mr-md" />
         <div class="text-h4">{{ baby?.baby_name || '寶寶詳細資料' }}</div>
       </div>
-      <q-btn
-        color="accent"
-        icon="monitor_weight"
-        label="新增資料"
-        @click="showStaticDialog = true"
-      />
     </div>
 
     <!-- 載入中狀態 -->
@@ -62,7 +56,7 @@
               <q-item v-if="baby.birth_day !== null && baby.birth_day !== undefined">
                 <q-item-section>
                   <q-item-label overline>出生天數</q-item-label>
-                  <q-item-label>{{ getDayName(baby.birth_day) }}</q-item-label>
+                  <q-item-label>{{ baby.birth_day }}</q-item-label>
                 </q-item-section>
               </q-item>
 
@@ -152,6 +146,74 @@
 
     <!-- 新增統計對話框 -->
     <BabyStaticDialog v-model="showStaticDialog" :baby="baby" @saved="onStaticSaved" />
+
+    <!-- 編輯寶寶對話框 -->
+    <q-dialog v-model="showEditDialog" persistent>
+      <q-card style="min-width: 400px">
+        <q-card-section>
+          <div class="text-h6">編輯寶寶資料</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <q-input
+            v-model="editForm.name"
+            label="寶寶姓名"
+            dense
+            class="q-mb-sm"
+            autofocus
+            :rules="[(val) => !!val || '請輸入寶寶姓名']"
+          />
+
+          <q-input
+            v-model="editForm.birthDate"
+            label="出生日期"
+            type="date"
+            dense
+            class="q-mb-sm"
+            :rules="[(val) => !!val || '請選擇出生日期']"
+          />
+
+          <div class="row q-gutter-sm q-mb-sm">
+            <div class="col">
+              <q-input
+                v-model.number="editForm.birthWeek"
+                label="出生週數"
+                type="number"
+                dense
+                min="20"
+                max="42"
+                hint="20-42週"
+              />
+            </div>
+            <div class="col">
+              <q-input
+                v-model.number="editForm.birthDay"
+                label="出生天數"
+                type="number"
+                dense
+                min="0"
+                max="6"
+                hint="0-6的數字"
+              />
+            </div>
+          </div>
+
+          <q-input
+            v-model="editForm.notes"
+            label="備註"
+            type="textarea"
+            dense
+            class="q-mt-sm"
+            rows="3"
+          />
+        </q-card-section>
+
+        <q-card-actions align="right" class="text-primary">
+          <q-btn flat label="取消" @click="closeEditDialog" />
+          <q-btn flat label="更新" @click="saveEdit" :loading="databaseStore.loading" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -178,12 +240,22 @@ const baby = ref<BabyRecord | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const showStaticDialog = ref(false);
+const showEditDialog = ref(false);
 
 // 統計表單
 const staticForm = ref({
   height: null as number | null,
   weight: null as number | null,
   headCircle: null as number | null,
+});
+
+// 編輯表單
+const editForm = ref({
+  name: '',
+  birthDate: '',
+  birthWeek: null as number | null,
+  birthDay: null as number | null,
+  notes: '',
 });
 
 // 計算屬性
@@ -261,11 +333,6 @@ function formatDateTime(dateString: string): string {
   return new Date(dateString).toLocaleString('zh-TW');
 }
 
-function getDayName(day: number): string {
-  const days = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-  return days[day] || '未知';
-}
-
 function calculateAge(): string {
   if (!baby.value) return '';
 
@@ -319,12 +386,18 @@ function calculateCorrectedAge(): string {
 }
 
 function editBaby() {
-  // 這裡可以導向編輯頁面或開啟編輯對話框
-  $q.notify({
-    type: 'info',
-    message: '編輯功能將在主選單中進行',
-  });
-  router.push('/');
+  if (!baby.value) return;
+
+  // 填入目前的寶寶資料到編輯表單
+  editForm.value = {
+    name: baby.value.baby_name,
+    birthDate: baby.value.birth_date,
+    birthWeek: baby.value.birth_week || null,
+    birthDay: baby.value.birth_day || null,
+    notes: baby.value.notes || '',
+  };
+
+  showEditDialog.value = true;
 }
 
 async function saveStatic() {
@@ -374,6 +447,64 @@ function closeAddStaticDialog() {
 
 function onStaticSaved() {
   showStaticDialog.value = false;
+}
+
+async function saveEdit() {
+  if (!baby.value || !editForm.value.name || !editForm.value.birthDate) {
+    $q.notify({
+      type: 'negative',
+      message: '請填寫完整資料',
+    });
+    return;
+  }
+
+  try {
+    const updateData: Record<string, unknown> = {
+      baby_name: editForm.value.name,
+      birth_date: editForm.value.birthDate,
+      notes: editForm.value.notes,
+    };
+
+    if (editForm.value.birthWeek !== null) {
+      updateData.birth_week = editForm.value.birthWeek;
+    }
+    if (editForm.value.birthDay !== null) {
+      updateData.birth_day = editForm.value.birthDay;
+    }
+
+    await databaseStore.updateBabyRecord(
+      baby.value.id,
+      updateData as Partial<Omit<BabyRecord, 'id' | 'user_id' | 'created_at' | 'updated_at'>>,
+    );
+
+    // 重新載入寶寶資料
+    await databaseStore.loadBabyRecords();
+    loadBabyData();
+
+    $q.notify({
+      type: 'positive',
+      message: '寶寶資料已更新',
+    });
+
+    closeEditDialog();
+  } catch (err) {
+    console.error('Update baby error:', err);
+    $q.notify({
+      type: 'negative',
+      message: '更新失敗，請稍後再試',
+    });
+  }
+}
+
+function closeEditDialog() {
+  showEditDialog.value = false;
+  editForm.value = {
+    name: '',
+    birthDate: '',
+    birthWeek: null,
+    birthDay: null,
+    notes: '',
+  };
 }
 
 function confirmDeleteStatic(staticId: string) {
