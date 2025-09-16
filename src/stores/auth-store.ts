@@ -21,6 +21,30 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       loading.value = true;
 
+      // 處理 OAuth 回調 - 檢查 URL 中是否有認證參數
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      
+      if (accessToken && refreshToken) {
+        // 如果有認證參數，清理 URL
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+        
+        // 手動設定 session
+        const { data, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+        } else if (data.user) {
+          user.value = data.user;
+          await loadUserProfile();
+          return; // 提早返回，避免重複處理
+        }
+      }
+
       // 取得當前 session
       const {
         data: { session },
@@ -58,7 +82,7 @@ export const useAuthStore = defineStore('auth', () => {
       const { data, error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}${window.location.pathname}`,
+          redirectTo: `${window.location.origin}${window.location.pathname}#/`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

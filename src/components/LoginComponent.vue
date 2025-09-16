@@ -79,10 +79,25 @@
 import { useAuthStore } from 'src/stores/auth-store';
 import { useDatabaseStore } from 'src/stores/database-store';
 import { useQuasar } from 'quasar';
+import { onMounted } from 'vue';
 
 const $q = useQuasar();
 const authStore = useAuthStore();
 const databaseStore = useDatabaseStore();
+
+// 組件掛載時檢查 URL 是否有認證參數
+onMounted(() => {
+  const hash = window.location.hash;
+  if (hash.includes('access_token') || hash.includes('error')) {
+    // 顯示處理中的訊息
+    $q.notify({
+      type: 'info',
+      message: '正在處理登入...',
+      position: 'top',
+      timeout: 2000
+    });
+  }
+});
 
 // Google 登入處理
 const handleGoogleLogin = async () => {
