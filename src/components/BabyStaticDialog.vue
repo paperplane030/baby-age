@@ -60,6 +60,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useBabyStaticsStore } from 'src/stores/baby-statics-store';
+import { useAuthStore } from 'src/stores/auth-store';
 import { useQuasar } from 'quasar';
 import type { BabyRecord } from 'src/supabase';
 
@@ -82,6 +83,7 @@ const emit = defineEmits<{
 
 // Stores
 const babyStaticsStore = useBabyStaticsStore();
+const authStore = useAuthStore();
 const $q = useQuasar();
 
 // 內部狀態
@@ -119,6 +121,11 @@ async function saveStatic() {
   }
 
   try {
+    // 驗證 baby_id 是否有效
+    if (!props.baby.id) {
+      throw new Error('Baby ID is missing');
+    }
+
     const staticData: { baby_id: string; height?: number; weight?: number; head_circle?: number } =
       {
         baby_id: props.baby.id,
@@ -129,10 +136,13 @@ async function saveStatic() {
     if (staticForm.value.headCircle !== null) staticData.head_circle = staticForm.value.headCircle;
 
     console.log('Saving static data:', staticData);
+    console.log('Current user ID:', authStore.user?.id);
+    console.log('Baby user_id:', props.baby.user_id);
 
     const result = await babyStaticsStore.createBabyStatic(staticData);
 
     if (result.error) {
+      console.error('Create baby static error:', result.error);
       throw new Error(result.error);
     }
 
@@ -149,7 +159,7 @@ async function saveStatic() {
     console.error('Save static error:', err);
     $q.notify({
       type: 'negative',
-      message: '新增失敗，請稍後再試',
+      message: `新增失敗：${err instanceof Error ? err.message : '請稍後再試'}`,
     });
   }
 }
