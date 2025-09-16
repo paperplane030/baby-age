@@ -70,7 +70,7 @@
               <q-item>
                 <q-item-section>
                   <q-item-label overline>矯正年齡</q-item-label>
-                  <q-item-label>{{ calculateCorrectedAge() }}</q-item-label>
+                  <q-item-label class="text-h6">{{ calculateCorrectedAge() }}</q-item-label>
                 </q-item-section>
               </q-item>
 
@@ -353,16 +353,9 @@ function calculateAge(): string {
   const today = new Date();
 
   const diffTime = today.getTime() - birthDate.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 因為出生當天算第一天
 
-  const months = Math.floor(diffDays / 30);
-  const days = diffDays % 30;
-
-  if (months > 0) {
-    return `${months} 個月 ${days} 天`;
-  } else {
-    return `${days} 天`;
-  }
+  return `${diffDays} 天`;
 }
 
 function calculateCorrectedAge(): string {
@@ -384,7 +377,7 @@ function calculateCorrectedAge(): string {
 
   // 計算出生後天數
   const diffTime = today.getTime() - birthDate.getTime();
-  const daysAfterBirth = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const daysAfterBirth = Math.floor(diffTime / (1000 * 60 * 60 * 24)) - 1; // -1 因為出生當天不算額外天數
 
   // 矯正年齡 = 出生胎齡 + 出生後天數
   const correctedAgeInDays = gestationalAgeInDays + daysAfterBirth;
