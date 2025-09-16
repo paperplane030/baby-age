@@ -377,7 +377,7 @@ function calculateCorrectedAge(): string {
 
   // 計算出生後天數
   const diffTime = today.getTime() - birthDate.getTime();
-  const daysAfterBirth = Math.floor(diffTime / (1000 * 60 * 60 * 24)) - 1; // -1 因為出生當天不算額外天數
+  const daysAfterBirth = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
   // 矯正年齡 = 出生胎齡 + 出生後天數
   const correctedAgeInDays = gestationalAgeInDays + daysAfterBirth;
