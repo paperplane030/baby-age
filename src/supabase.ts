@@ -40,6 +40,15 @@ export interface BabyRecord {
   updated_at: string;
 }
 
+export interface BabyStatic {
+  id: string;
+  baby_id: string;
+  height?: number;
+  weight?: number;
+  head_circle?: number;
+  created_time: string;
+}
+
 // 資料庫型別（自動生成）
 export type Database = {
   public: {
@@ -53,6 +62,11 @@ export type Database = {
         Row: BabyRecord;
         Insert: Omit<BabyRecord, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<BabyRecord, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      baby_statics: {
+        Row: BabyStatic;
+        Insert: Omit<BabyStatic, 'id' | 'created_time'>;
+        Update: Partial<Omit<BabyStatic, 'id' | 'created_time'>>;
       };
     };
   };

@@ -83,11 +83,28 @@
           <q-item-section>
             <q-item-label>{{ baby.baby_name }}</q-item-label>
             <q-item-label caption> 出生日期: {{ formatDate(baby.birth_date) }} </q-item-label>
+            <!-- 顯示最新的統計資料 -->
+            <q-item-label v-if="getLatestStatic(baby.id)" caption class="text-info">
+              最新紀錄: {{ formatStaticInfo(getLatestStatic(baby.id)) }}
+            </q-item-label>
           </q-item-section>
           <q-item-section side>
-            <q-btn flat round dense icon="edit" size="sm" @click.stop="editBaby(baby)">
-              <q-tooltip>編輯</q-tooltip>
-            </q-btn>
+            <div class="row q-gutter-xs">
+              <q-btn
+                flat
+                round
+                dense
+                icon="monitor_weight"
+                size="sm"
+                color="primary"
+                @click.stop="openStaticDialog(baby)"
+              >
+                <q-tooltip>身高體重紀錄</q-tooltip>
+              </q-btn>
+              <q-btn flat round dense icon="edit" size="sm" @click.stop="editBaby(baby)">
+                <q-tooltip>編輯寶寶</q-tooltip>
+              </q-btn>
+            </div>
           </q-item-section>
         </q-item>
 
@@ -162,32 +179,150 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- 寶寶統計資料對話框 -->
+    <q-dialog v-model="showStaticDialog">
+      <q-card style="min-width: 400px">
+        <q-card-section>
+          <div class="text-h6">{{ selectedBabyForStatic?.baby_name }} - 身高體重紀錄</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <div class="row q-gutter-md">
+            <div class="col">
+              <q-input
+                v-model.number="staticForm.height"
+                label="身高 (公分)"
+                type="number"
+                dense
+                suffix="cm"
+                :rules="[(val) => val === null || val === undefined || val > 0 || '請輸入有效數值']"
+              />
+            </div>
+            <div class="col">
+              <q-input
+                v-model.number="staticForm.weight"
+                label="體重 (公斤)"
+                type="number"
+                dense
+                suffix="kg"
+                step="0.1"
+                :rules="[(val) => val === null || val === undefined || val > 0 || '請輸入有效數值']"
+              />
+            </div>
+          </div>
+          <div class="q-mt-md">
+            <q-input
+              v-model.number="staticForm.headCircle"
+              label="頭圍 (公分)"
+              type="number"
+              dense
+              suffix="cm"
+              step="0.1"
+              :rules="[(val) => val === null || val === undefined || val > 0 || '請輸入有效數值']"
+            />
+          </div>
+
+          <!-- 顯示歷史紀錄 -->
+          <div v-if="currentBabyStatics.length > 0" class="q-mt-lg">
+            <q-separator />
+            <div class="text-subtitle2 q-mt-md q-mb-sm">最近紀錄</div>
+            <q-list dense>
+              <q-item
+                v-for="record in currentBabyStatics.slice(0, 3)"
+                :key="record.id"
+                class="q-px-none"
+              >
+                <q-item-section>
+                  <q-item-label caption>{{ formatDateTime(record.created_time) }}</q-item-label>
+                  <q-item-label>
+                    <span v-if="record.height">身高: {{ record.height }}cm</span>
+                    <span v-if="record.weight" class="q-ml-md">體重: {{ record.weight }}kg</span>
+                    <span v-if="record.head_circle" class="q-ml-md"
+                      >頭圍: {{ record.head_circle }}cm</span
+                    >
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    icon="delete"
+                    size="sm"
+                    color="negative"
+                    @click="deleteStatic(record.id)"
+                  >
+                    <q-tooltip>刪除</q-tooltip>
+                  </q-btn>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="text-primary">
+          <q-btn flat label="取消" @click="closeStaticDialog" />
+          <q-btn
+            flat
+            label="新增紀錄"
+            @click="saveStatic"
+            :loading="babyStaticsStore.loading"
+            :disable="!hasValidStaticData"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from 'src/stores/auth-store';
 import { useDatabaseStore } from 'src/stores/database-store';
+import { useBabyStaticsStore } from 'src/stores/baby-statics-store';
 import { useQuasar } from 'quasar';
-import type { BabyRecord } from 'src/supabase';
+import type { BabyRecord, BabyStatic } from 'src/supabase';
 
 // Stores
 const authStore = useAuthStore();
 const databaseStore = useDatabaseStore();
+const babyStaticsStore = useBabyStaticsStore();
 const $q = useQuasar();
 
 // 狀態
 const leftDrawerOpen = ref(false);
 const showAddBabyDialog = ref(false);
+const showStaticDialog = ref(false);
 const selectedBabyId = ref<string | null>(null);
 const editingBaby = ref<BabyRecord | null>(null);
+const selectedBabyForStatic = ref<BabyRecord | null>(null);
 
 // 表單資料
 const babyForm = ref({
   name: '',
   birthDate: '',
   notes: '',
+});
+
+const staticForm = ref({
+  height: null as number | null,
+  weight: null as number | null,
+  headCircle: null as number | null,
+});
+
+// 計算屬性
+const currentBabyStatics = computed(() => {
+  if (!selectedBabyForStatic.value) return [];
+  return babyStaticsStore.getStaticsByBabyId(selectedBabyForStatic.value.id);
+});
+
+const hasValidStaticData = computed(() => {
+  return (
+    staticForm.value.height !== null ||
+    staticForm.value.weight !== null ||
+    staticForm.value.headCircle !== null
+  );
 });
 
 // 方法
@@ -291,10 +426,104 @@ async function handleSignOut() {
   }
 }
 
+// 統計資料相關方法
+function getLatestStatic(babyId: string) {
+  return babyStaticsStore.getLatestStaticByBabyId(babyId);
+}
+
+function formatStaticInfo(staticRecord: BabyStatic | null | undefined) {
+  if (!staticRecord) return '';
+  const parts = [];
+  if (staticRecord.height) parts.push(`${staticRecord.height}cm`);
+  if (staticRecord.weight) parts.push(`${staticRecord.weight}kg`);
+  if (staticRecord.head_circle) parts.push(`頭圍${staticRecord.head_circle}cm`);
+  return parts.join(', ');
+}
+
+function formatDateTime(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleString('zh-TW');
+}
+
+function openStaticDialog(baby: BabyRecord) {
+  selectedBabyForStatic.value = baby;
+  showStaticDialog.value = true;
+  // 載入該寶寶的統計資料
+  void babyStaticsStore.loadBabyStatics(baby.id);
+}
+
+function closeStaticDialog() {
+  showStaticDialog.value = false;
+  selectedBabyForStatic.value = null;
+  staticForm.value = {
+    height: null,
+    weight: null,
+    headCircle: null,
+  };
+}
+
+async function saveStatic() {
+  if (!selectedBabyForStatic.value || !hasValidStaticData.value) {
+    $q.notify({
+      type: 'negative',
+      message: '請至少填寫一項數據',
+    });
+    return;
+  }
+
+  try {
+    const staticData: { baby_id: string; height?: number; weight?: number; head_circle?: number } =
+      {
+        baby_id: selectedBabyForStatic.value.id,
+      };
+
+    if (staticForm.value.height !== null) staticData.height = staticForm.value.height;
+    if (staticForm.value.weight !== null) staticData.weight = staticForm.value.weight;
+    if (staticForm.value.headCircle !== null) staticData.head_circle = staticForm.value.headCircle;
+
+    await babyStaticsStore.createBabyStatic(staticData);
+
+    $q.notify({
+      type: 'positive',
+      message: '統計資料已新增',
+    });
+
+    // 重置表單但保持對話框開啟
+    staticForm.value = {
+      height: null,
+      weight: null,
+      headCircle: null,
+    };
+  } catch (err) {
+    console.error('Save static error:', err);
+    $q.notify({
+      type: 'negative',
+      message: '新增失敗，請稍後再試',
+    });
+  }
+}
+
+async function deleteStatic(staticId: string) {
+  try {
+    await babyStaticsStore.deleteBabyStatic(staticId);
+    $q.notify({
+      type: 'positive',
+      message: '紀錄已刪除',
+    });
+  } catch (err) {
+    console.error('Delete static error:', err);
+    $q.notify({
+      type: 'negative',
+      message: '刪除失敗，請稍後再試',
+    });
+  }
+}
+
 // 初始化
 onMounted(async () => {
   if (authStore.isAuthenticated) {
     await databaseStore.loadBabyRecords();
+    await babyStaticsStore.loadBabyStatics();
   }
 });
 </script>
