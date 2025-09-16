@@ -97,8 +97,8 @@
         </q-card>
       </div>
 
-      <!-- 右側：圖表和統計 -->
-      <div class="col-12 col-md-9">
+      <!-- 圖表和統計 -->
+      <div class="row">
         <!-- 成長曲線圖表 -->
         <div class="row q-gutter-md q-mb-lg">
           <!-- 身高圖表 -->
@@ -628,7 +628,16 @@ function createChart(
   data: { x: Date; y: number }[],
   color: string,
   unit: string,
+  latestDate?: string,
 ): ChartType {
+  const dateText = latestDate
+    ? `(${new Date(latestDate).toLocaleDateString('zh-TW', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })})`
+    : '';
+
   const config: ChartConfiguration = {
     type: 'line',
     data: {
@@ -638,6 +647,10 @@ function createChart(
           data: data as any,
           borderColor: color,
           backgroundColor: color + '20',
+          pointBackgroundColor: color, // 設定點的背景色為實心
+          pointBorderColor: color, // 設定點的邊框色
+          pointRadius: 4, // 設定點的大小
+          pointHoverRadius: 6, // 滑鼠懸停時點的大小
           fill: false,
           tension: 0.4,
         },
@@ -664,7 +677,7 @@ function createChart(
           beginAtZero: true,
           title: {
             display: true,
-            text: unit,
+            text: `${unit} ${dateText}`,
           },
         },
       },
@@ -717,12 +730,15 @@ function updateCharts() {
       if (heightChartInstance.value) {
         heightChartInstance.value.destroy();
       }
+      const latestHeight = heightData.length > 0 ? heightData[heightData.length - 1] : null;
+      const latestHeightDate = latestHeight?.x ? latestHeight.x.toISOString() : undefined;
       heightChartInstance.value = createChart(
         heightChart.value,
         '身高',
         heightData,
         '#2196F3',
         '身高 (cm)',
+        latestHeightDate,
       );
     }
 
@@ -731,12 +747,15 @@ function updateCharts() {
       if (weightChartInstance.value) {
         weightChartInstance.value.destroy();
       }
+      const latestWeight = weightData.length > 0 ? weightData[weightData.length - 1] : null;
+      const latestWeightDate = latestWeight?.x ? latestWeight.x.toISOString() : undefined;
       weightChartInstance.value = createChart(
         weightChart.value,
         '體重',
         weightData,
         '#4CAF50',
         '體重 (kg)',
+        latestWeightDate,
       );
     }
 
@@ -745,12 +764,15 @@ function updateCharts() {
       if (headChartInstance.value) {
         headChartInstance.value.destroy();
       }
+      const latestHead = headData.length > 0 ? headData[headData.length - 1] : null;
+      const latestHeadDate = latestHead?.x ? latestHead.x.toISOString() : undefined;
       headChartInstance.value = createChart(
         headChart.value,
         '頭圍',
         headData,
         '#FF9800',
         '頭圍 (cm)',
+        latestHeadDate,
       );
     }
   });
