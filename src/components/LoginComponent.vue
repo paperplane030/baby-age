@@ -1,5 +1,5 @@
 <template>
-  <div class="login-component q-pa-md">
+  <div class="login-component q-pa-md full-width">
     <div v-if="!authStore.isAuthenticated" class="text-center">
       <h5>歡迎使用寶寶年齡追蹤器</h5>
       <p class="text-grey-6">請使用 Google 帳號登入以開始使用</p>
@@ -22,9 +22,9 @@
     </div>
 
     <!-- 登入後的左右排版 -->
-    <div v-else class="row">
+    <div v-else class="row items-center" style="gap: 16px">
       <!-- 左側：歡迎區域 -->
-      <div class="col-12 col-md-5 q-mr-md">
+      <div class="col-12 col-md-7">
         <q-card flat bordered>
           <q-card-section class="text-center">
             <q-avatar size="80px" class="q-mb-md">
@@ -67,7 +67,12 @@
               <div class="text-caption text-grey-6 q-mb-sm">我的寶寶們：</div>
 
               <div v-for="baby in databaseStore.babyRecords" :key="baby.id" class="q-mb-md">
-                <q-card flat bordered class="q-pa-sm">
+                <q-card
+                  flat
+                  bordered
+                  class="q-pa-sm cursor-pointer transition-all hover-shadow"
+                  @click="navigateToBabyDetail(baby.id)"
+                >
                   <div class="row items-center">
                     <div class="col">
                       <div class="text-body1 text-weight-medium">
@@ -118,6 +123,12 @@
                   <div v-else class="q-mt-sm">
                     <div class="text-caption text-grey-6">尚無數據紀錄</div>
                   </div>
+
+                  <!-- 點擊提示 -->
+                  <div class="text-center q-mt-sm">
+                    <q-icon name="touch_app" size="sm" color="grey-5" />
+                    <span class="text-caption text-grey-5 q-ml-xs">點擊查看詳細資料</span>
+                  </div>
                 </q-card>
               </div>
             </div>
@@ -133,6 +144,7 @@ import { useAuthStore } from 'src/stores/auth-store';
 import { useDatabaseStore } from 'src/stores/database-store';
 import { useBabyStaticsStore } from 'src/stores/baby-statics-store';
 import { useQuasar } from 'quasar';
+import { useRouter } from 'vue-router';
 import { onMounted, watch } from 'vue';
 
 // 定義 emit
@@ -141,6 +153,7 @@ const emit = defineEmits<{
 }>();
 
 const $q = useQuasar();
+const router = useRouter();
 const authStore = useAuthStore();
 const databaseStore = useDatabaseStore();
 const babyStaticsStore = useBabyStaticsStore();
@@ -148,6 +161,15 @@ const babyStaticsStore = useBabyStaticsStore();
 // 獲取指定寶寶的最新數據紀錄
 const getBabyLatestStatic = (babyId: string) => {
   return babyStaticsStore.getLatestStaticByBabyId(babyId);
+};
+
+// 導航到寶寶詳細頁面
+const navigateToBabyDetail = async (babyId: string) => {
+  try {
+    await router.push(`/baby/${babyId}`);
+  } catch (error) {
+    console.error('Navigation error:', error);
+  }
 };
 
 // 計算年齡
@@ -232,5 +254,18 @@ const formatDate = (dateString: string) => {
 .login-component {
   max-width: 960px;
   margin: 0 auto;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.transition-all {
+  transition: all 0.2s ease;
+}
+
+.hover-shadow:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 </style>
