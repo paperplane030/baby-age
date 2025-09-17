@@ -22,9 +22,9 @@
     </div>
 
     <!-- 登入後的左右排版 -->
-    <div v-else class="row q-gutter-lg">
+    <div v-else class="row">
       <!-- 左側：歡迎區域 -->
-      <div class="col-12 col-md-5">
+      <div class="col-12 col-md-5 q-mr-md">
         <q-card flat bordered>
           <q-card-section class="text-center">
             <q-avatar size="80px" class="q-mb-md">
@@ -47,13 +47,7 @@
             <q-icon name="child_care" size="60px" color="primary" class="q-mb-md" />
             <div class="text-h6">還沒有寶寶紀錄</div>
             <div class="text-subtitle2 text-grey-6 q-mb-md">開始建立您的第一個寶寶檔案吧！</div>
-            <q-btn
-              @click="$emit('addBaby')"
-              color="primary"
-              icon="add"
-              label="新增寶寶"
-              size="lg"
-            />
+            <q-btn @click="emit('addBaby')" color="primary" icon="add" label="新增寶寶" size="lg" />
           </q-card-section>
         </q-card>
 
@@ -68,41 +62,64 @@
               共有 {{ databaseStore.recordCount }} 筆寶寶紀錄
             </div>
 
-            <!-- 最新寶寶記錄 -->
-            <div v-if="databaseStore.latestRecord" class="q-mt-md">
-              <div class="text-caption text-grey-6">最新寶寶：</div>
-              <div class="text-body1 q-mb-sm">
-                {{ databaseStore.latestRecord.baby_name }}
-                ({{ formatDate(databaseStore.latestRecord.birth_date) }})
-              </div>
-            </div>
+            <!-- 所有寶寶記錄 -->
+            <div v-if="databaseStore.babyRecords.length > 0" class="q-mt-md">
+              <div class="text-caption text-grey-6 q-mb-sm">我的寶寶們：</div>
 
-            <!-- 最新數據紀錄 -->
-            <div v-if="latestBabyStatic" class="q-mt-md">
-              <div class="text-caption text-grey-6">最新數據紀錄：</div>
-              <div class="row q-gutter-sm text-body2">
-                <div v-if="latestBabyStatic.height" class="col">
-                  <q-chip dense color="blue" text-color="white" icon="height">
-                    身高: {{ latestBabyStatic.height }}cm
-                  </q-chip>
-                </div>
-                <div v-if="latestBabyStatic.weight" class="col">
-                  <q-chip dense color="green" text-color="white" icon="monitor_weight">
-                    體重: {{ latestBabyStatic.weight }}kg
-                  </q-chip>
-                </div>
-                <div v-if="latestBabyStatic.head_circle" class="col">
-                  <q-chip dense color="orange" text-color="white" icon="psychology">
-                    頭圍: {{ latestBabyStatic.head_circle }}cm
-                  </q-chip>
-                </div>
+              <div v-for="baby in databaseStore.babyRecords" :key="baby.id" class="q-mb-md">
+                <q-card flat bordered class="q-pa-sm">
+                  <div class="row items-center">
+                    <div class="col">
+                      <div class="text-body1 text-weight-medium">
+                        {{ baby.baby_name }}
+                      </div>
+                      <div class="text-caption text-grey-6">
+                        生日: {{ formatDate(baby.birth_date) }}
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <q-chip
+                        dense
+                        color="primary"
+                        text-color="white"
+                        icon="cake"
+                        :label="calculateAge(baby.birth_date)"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- 該寶寶的最新數據紀錄 -->
+                  <div v-if="getBabyLatestStatic(baby.id)" class="q-mt-sm">
+                    <div class="text-caption text-grey-6">最新數據：</div>
+                    <div class="row q-gutter-xs">
+                      <div v-if="getBabyLatestStatic(baby.id)?.height">
+                        <q-chip dense size="sm" color="blue" text-color="white" icon="height">
+                          {{ getBabyLatestStatic(baby.id)?.height }}cm
+                        </q-chip>
+                      </div>
+                      <div v-if="getBabyLatestStatic(baby.id)?.weight">
+                        <q-chip
+                          dense
+                          size="sm"
+                          color="green"
+                          text-color="white"
+                          icon="monitor_weight"
+                        >
+                          {{ getBabyLatestStatic(baby.id)?.weight }}kg
+                        </q-chip>
+                      </div>
+                      <div v-if="getBabyLatestStatic(baby.id)?.head_circle">
+                        <q-chip dense size="sm" color="orange" text-color="white" icon="psychology">
+                          {{ getBabyLatestStatic(baby.id)?.head_circle }}cm
+                        </q-chip>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-else class="q-mt-sm">
+                    <div class="text-caption text-grey-6">尚無數據紀錄</div>
+                  </div>
+                </q-card>
               </div>
-              <div class="text-caption text-grey-6 q-mt-xs">
-                記錄時間: {{ formatDateTime(latestBabyStatic.created_time) }}
-              </div>
-            </div>
-            <div v-else-if="databaseStore.latestRecord" class="q-mt-md">
-              <div class="text-caption text-grey-6">尚無數據紀錄</div>
             </div>
           </q-card-section>
         </q-card>
@@ -116,31 +133,60 @@ import { useAuthStore } from 'src/stores/auth-store';
 import { useDatabaseStore } from 'src/stores/database-store';
 import { useBabyStaticsStore } from 'src/stores/baby-statics-store';
 import { useQuasar } from 'quasar';
-import { onMounted, computed, watch } from 'vue';
+import { onMounted, watch } from 'vue';
+
+// 定義 emit
+const emit = defineEmits<{
+  addBaby: [];
+}>();
 
 const $q = useQuasar();
 const authStore = useAuthStore();
 const databaseStore = useDatabaseStore();
 const babyStaticsStore = useBabyStaticsStore();
 
-// 計算最新的數據紀錄
-const latestBabyStatic = computed(() => {
-  if (!databaseStore.latestRecord) return null;
+// 獲取指定寶寶的最新數據紀錄
+const getBabyLatestStatic = (babyId: string) => {
+  return babyStaticsStore.getLatestStaticByBabyId(babyId);
+};
 
-  // 獲取最新寶寶的最新數據紀錄
-  const latestBabyId = databaseStore.latestRecord.id;
-  return babyStaticsStore.getLatestStaticByBabyId(latestBabyId);
-});
+// 計算年齡
+const calculateAge = (birthDate: string) => {
+  const birth = new Date(birthDate);
+  const today = new Date();
+  const diffTime = Math.abs(today.getTime() - birth.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-// 當有最新寶寶記錄時，載入其數據紀錄
+  if (diffDays < 30) {
+    return `${diffDays} 天`;
+  } else if (diffDays < 365) {
+    const months = Math.floor(diffDays / 30);
+    return `${months} 個月`;
+  } else {
+    const years = Math.floor(diffDays / 365);
+    const remainingMonths = Math.floor((diffDays % 365) / 30);
+    return remainingMonths > 0 ? `${years} 歲 ${remainingMonths} 個月` : `${years} 歲`;
+  }
+};
+
+// 載入所有寶寶的數據紀錄
+const loadAllBabiesStatics = async () => {
+  if (databaseStore.babyRecords.length > 0) {
+    for (const baby of databaseStore.babyRecords) {
+      await babyStaticsStore.loadBabyStatics(baby.id);
+    }
+  }
+};
+
+// 當有寶寶記錄時，載入所有寶寶的數據紀錄
 watch(
-  () => databaseStore.latestRecord,
-  async (newRecord) => {
-    if (newRecord && authStore.isAuthenticated) {
-      await babyStaticsStore.loadBabyStatics(newRecord.id);
+  () => databaseStore.babyRecords,
+  async (newRecords) => {
+    if (newRecords.length > 0 && authStore.isAuthenticated) {
+      await loadAllBabiesStatics();
     }
   },
-  { immediate: true },
+  { immediate: true, deep: true },
 );
 
 // 組件掛載時檢查 URL 是否有認證參數
@@ -180,16 +226,11 @@ const handleGoogleLogin = async () => {
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('zh-TW');
 };
-
-// 格式化日期時間
-const formatDateTime = (dateString: string) => {
-  return new Date(dateString).toLocaleString('zh-TW');
-};
 </script>
 
 <style scoped>
 .login-component {
-  max-width: 400px;
+  max-width: 960px;
   margin: 0 auto;
 }
 </style>
