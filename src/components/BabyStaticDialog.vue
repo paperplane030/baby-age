@@ -3,7 +3,7 @@
   <q-dialog v-model="isVisible" @hide="handleClose">
     <q-card style="min-width: 400px">
       <q-card-section>
-        <div class="text-h6">{{ baby?.baby_name }} - 新增資料紀錄</div>
+        <div class="text-h6">{{ baby?.baby_name }} - 新增數據紀錄</div>
       </q-card-section>
 
       <q-card-section class="q-pt-none">
@@ -148,7 +148,7 @@ async function saveStatic() {
 
     $q.notify({
       type: 'positive',
-      message: '資料紀錄已新增',
+      message: '數據紀錄已新增',
     });
 
     // 重置表單並關閉對話框

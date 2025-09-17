@@ -21,56 +21,92 @@
       </div>
     </div>
 
-    <div v-else class="text-center">
-      <q-avatar size="80px" class="q-mb-md">
-        <img
-          :src="authStore.userProfile?.avatar_url || '/icons/favicon-96x96.png'"
-          alt="用戶頭像"
-        />
-      </q-avatar>
-
-      <h6 class="q-my-md">歡迎回來，{{ authStore.userName }}！</h6>
-      <p class="text-grey-6">{{ authStore.userEmail }}</p>
-
-      <div class="q-mt-lg">
-        <q-btn
-          @click="handleSignOut"
-          :loading="authStore.loading"
-          color="negative"
-          outline
-          icon="logout"
-          label="登出"
-          :disable="authStore.loading"
-        />
+    <!-- 登入後的左右排版 -->
+    <div v-else class="row q-gutter-lg">
+      <!-- 左側：歡迎區域 -->
+      <div class="col-12 col-md-5">
+        <q-card flat bordered>
+          <q-card-section class="text-center">
+            <q-avatar size="80px" class="q-mb-md">
+              <img
+                :src="authStore.userProfile?.avatar_url || '/icons/favicon-96x96.png'"
+                alt="用戶頭像"
+              />
+            </q-avatar>
+            <h6 class="q-my-md">歡迎回來，{{ authStore.userName }}！</h6>
+            <p class="text-grey-6">{{ authStore.userEmail }}</p>
+          </q-card-section>
+        </q-card>
       </div>
 
-      <!-- 簡單的嬰兒記錄狀態顯示 -->
-      <q-card class="q-mt-lg" flat bordered>
-        <q-card-section>
-          <div class="text-h6">我的記錄</div>
-          <div class="text-subtitle2 text-grey-6">
-            共有 {{ databaseStore.recordCount }} 筆嬰兒記錄
-          </div>
-          <div v-if="databaseStore.latestRecord" class="q-mt-sm">
-            <div class="text-caption">最新記錄：</div>
-            <div class="text-body2">
-              {{ databaseStore.latestRecord.baby_name }}
-              ({{ formatDate(databaseStore.latestRecord.birth_date) }})
-            </div>
-          </div>
-        </q-card-section>
+      <!-- 右側：寶寶記錄區域 -->
+      <div class="col-12 col-md-7">
+        <!-- 如果沒有寶寶，顯示新增寶寶按鈕 -->
+        <q-card v-if="databaseStore.recordCount === 0" flat bordered>
+          <q-card-section class="text-center">
+            <q-icon name="child_care" size="60px" color="primary" class="q-mb-md" />
+            <div class="text-h6">還沒有寶寶紀錄</div>
+            <div class="text-subtitle2 text-grey-6 q-mb-md">開始建立您的第一個寶寶檔案吧！</div>
+            <q-btn
+              @click="$emit('addBaby')"
+              color="primary"
+              icon="add"
+              label="新增寶寶"
+              size="lg"
+            />
+          </q-card-section>
+        </q-card>
 
-        <q-card-actions align="center">
-          <q-btn
-            @click="loadRecords"
-            :loading="databaseStore.loading"
-            color="primary"
-            flat
-            label="載入記錄"
-            icon="refresh"
-          />
-        </q-card-actions>
-      </q-card>
+        <!-- 如果有寶寶，顯示記錄統計 -->
+        <q-card v-else flat bordered>
+          <q-card-section>
+            <div class="text-h6 q-mb-md">
+              <q-icon name="child_friendly" class="q-mr-sm" />
+              我的寶寶記錄
+            </div>
+            <div class="text-subtitle2 text-grey-6">
+              共有 {{ databaseStore.recordCount }} 筆寶寶紀錄
+            </div>
+
+            <!-- 最新寶寶記錄 -->
+            <div v-if="databaseStore.latestRecord" class="q-mt-md">
+              <div class="text-caption text-grey-6">最新寶寶：</div>
+              <div class="text-body1 q-mb-sm">
+                {{ databaseStore.latestRecord.baby_name }}
+                ({{ formatDate(databaseStore.latestRecord.birth_date) }})
+              </div>
+            </div>
+
+            <!-- 最新數據紀錄 -->
+            <div v-if="latestBabyStatic" class="q-mt-md">
+              <div class="text-caption text-grey-6">最新數據紀錄：</div>
+              <div class="row q-gutter-sm text-body2">
+                <div v-if="latestBabyStatic.height" class="col">
+                  <q-chip dense color="blue" text-color="white" icon="height">
+                    身高: {{ latestBabyStatic.height }}cm
+                  </q-chip>
+                </div>
+                <div v-if="latestBabyStatic.weight" class="col">
+                  <q-chip dense color="green" text-color="white" icon="monitor_weight">
+                    體重: {{ latestBabyStatic.weight }}kg
+                  </q-chip>
+                </div>
+                <div v-if="latestBabyStatic.head_circle" class="col">
+                  <q-chip dense color="orange" text-color="white" icon="psychology">
+                    頭圍: {{ latestBabyStatic.head_circle }}cm
+                  </q-chip>
+                </div>
+              </div>
+              <div class="text-caption text-grey-6 q-mt-xs">
+                記錄時間: {{ formatDateTime(latestBabyStatic.created_time) }}
+              </div>
+            </div>
+            <div v-else-if="databaseStore.latestRecord" class="q-mt-md">
+              <div class="text-caption text-grey-6">尚無數據紀錄</div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
     </div>
   </div>
 </template>
@@ -78,12 +114,34 @@
 <script setup lang="ts">
 import { useAuthStore } from 'src/stores/auth-store';
 import { useDatabaseStore } from 'src/stores/database-store';
+import { useBabyStaticsStore } from 'src/stores/baby-statics-store';
 import { useQuasar } from 'quasar';
-import { onMounted } from 'vue';
+import { onMounted, computed, watch } from 'vue';
 
 const $q = useQuasar();
 const authStore = useAuthStore();
 const databaseStore = useDatabaseStore();
+const babyStaticsStore = useBabyStaticsStore();
+
+// 計算最新的數據紀錄
+const latestBabyStatic = computed(() => {
+  if (!databaseStore.latestRecord) return null;
+
+  // 獲取最新寶寶的最新數據紀錄
+  const latestBabyId = databaseStore.latestRecord.id;
+  return babyStaticsStore.getLatestStaticByBabyId(latestBabyId);
+});
+
+// 當有最新寶寶記錄時，載入其數據紀錄
+watch(
+  () => databaseStore.latestRecord,
+  async (newRecord) => {
+    if (newRecord && authStore.isAuthenticated) {
+      await babyStaticsStore.loadBabyStatics(newRecord.id);
+    }
+  },
+  { immediate: true },
+);
 
 // 組件掛載時檢查 URL 是否有認證參數
 onMounted(() => {
@@ -118,40 +176,14 @@ const handleGoogleLogin = async () => {
   }
 };
 
-// 登出處理
-const handleSignOut = async () => {
-  await authStore.signOut();
-  databaseStore.clearData();
-
-  $q.notify({
-    type: 'info',
-    message: '已成功登出',
-    position: 'top',
-  });
-};
-
-// 載入記錄
-const loadRecords = async () => {
-  const result = await databaseStore.loadBabyRecords();
-
-  if (result?.error) {
-    $q.notify({
-      type: 'negative',
-      message: `載入記錄失敗: ${result.error}`,
-      position: 'top',
-    });
-  } else {
-    $q.notify({
-      type: 'positive',
-      message: '記錄載入成功',
-      position: 'top',
-    });
-  }
-};
-
 // 格式化日期
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('zh-TW');
+};
+
+// 格式化日期時間
+const formatDateTime = (dateString: string) => {
+  return new Date(dateString).toLocaleString('zh-TW');
 };
 </script>
 

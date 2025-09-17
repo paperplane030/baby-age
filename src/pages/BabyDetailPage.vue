@@ -26,9 +26,27 @@
       <div class="col-12 col-md-3">
         <q-card class="q-pa-md">
           <q-card-section>
-            <div class="text-h6 q-mb-md">
-              <q-icon name="child_friendly" class="q-mr-sm" />
-              基本資料
+            <div class="row justify-between text-h6 q-mb-md">
+              <span>
+                <q-icon name="child_friendly" class="q-mr-sm" />
+                基本資料
+              </span>
+              <!-- 操作按鈕 -->
+              <div>
+                <q-btn
+                  color="primary"
+                  icon="edit"
+                  label="編輯資料"
+                  @click="editBaby"
+                  class="q-mr-sm"
+                />
+                <q-btn
+                  color="primary"
+                  icon="add"
+                  label="新增數據"
+                  @click="showStaticDialog = true"
+                />
+              </div>
             </div>
 
             <q-list>
@@ -81,30 +99,18 @@
                 </q-item-section>
               </q-item>
             </q-list>
-
-            <!-- 操作按鈕 -->
-            <div class="q-mt-md">
-              <q-btn
-                color="primary"
-                icon="edit"
-                label="編輯資料"
-                @click="editBaby"
-                class="q-mr-sm"
-              />
-              <q-btn color="primary" icon="add" label="新增資料" @click="showStaticDialog = true" />
-            </div>
           </q-card-section>
         </q-card>
       </div>
 
       <!-- 右側：表格 -->
       <div class="col-12">
-        <!-- 資料紀錄表格 -->
+        <!-- 數據紀錄表格 -->
         <q-card class="q-mb-lg">
           <q-card-section>
             <div class="text-h6 q-mb-md">
               <q-icon name="trending_up" class="q-mr-sm" />
-              資料紀錄
+              數據紀錄
             </div>
 
             <!-- 統計表格 -->
@@ -114,7 +120,7 @@
               row-key="id"
               :loading="staticsLoading"
               :rows-per-page-options="[10, 20, 50]"
-              :no-data-label="'暫無資料紀錄'"
+              :no-data-label="'暫無數據紀錄'"
               class="q-mt-md"
             >
               <!-- 自定義行的樣式和內容 -->
@@ -270,19 +276,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, nextTick, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { useDatabaseStore } from 'src/stores/database-store';
 import { useBabyStaticsStore } from 'src/stores/baby-statics-store';
 import { useQuasar } from 'quasar';
-import type { BabyRecord, BabyStatic } from 'src/supabase';
+import type { BabyRecord } from 'src/supabase';
 import BabyStaticDialog from 'src/components/BabyStaticDialog.vue';
 import { Chart, registerables, type ChartConfiguration, type Chart as ChartType } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 
 // 路由和通知
 const route = useRoute();
-const router = useRouter();
 const $q = useQuasar();
 
 // Stores
@@ -309,13 +314,6 @@ const heightChartInstance = ref<ChartType>();
 const weightChartInstance = ref<ChartType>();
 const headChartInstance = ref<ChartType>();
 
-// 統計表單
-const staticForm = ref({
-  height: null as number | null,
-  weight: null as number | null,
-  headCircle: null as number | null,
-});
-
 // 編輯表單
 const editForm = ref({
   name: '',
@@ -335,14 +333,6 @@ const babyStatics = computed(() => {
 const staticsLoading = computed(() => {
   // 只有在有寶寶資料且正在載入統計資料時才顯示 loading
   return !!(baby.value && babyStaticsStore.loading && babyStatics.value.length === 0);
-});
-
-const hasValidStaticData = computed(() => {
-  return (
-    staticForm.value.height !== null ||
-    staticForm.value.weight !== null ||
-    staticForm.value.headCircle !== null
-  );
 });
 
 // 表格欄位定義
@@ -490,51 +480,6 @@ function editBaby() {
   showEditDialog.value = true;
 }
 
-async function saveStatic() {
-  if (!baby.value || !hasValidStaticData.value) {
-    $q.notify({
-      type: 'negative',
-      message: '請至少填寫一項數據',
-    });
-    return;
-  }
-
-  try {
-    const staticData: { baby_id: string; height?: number; weight?: number; head_circle?: number } =
-      {
-        baby_id: baby.value.id,
-      };
-
-    if (staticForm.value.height !== null) staticData.height = staticForm.value.height;
-    if (staticForm.value.weight !== null) staticData.weight = staticForm.value.weight;
-    if (staticForm.value.headCircle !== null) staticData.head_circle = staticForm.value.headCircle;
-
-    await babyStaticsStore.createBabyStatic(staticData);
-
-    $q.notify({
-      type: 'positive',
-      message: '統計資料已新增',
-    });
-
-    closeAddStaticDialog();
-  } catch (err) {
-    console.error('Save static error:', err);
-    $q.notify({
-      type: 'negative',
-      message: '新增失敗，請稍後再試',
-    });
-  }
-}
-
-function closeAddStaticDialog() {
-  showStaticDialog.value = false;
-  staticForm.value = {
-    height: null,
-    weight: null,
-    headCircle: null,
-  };
-}
-
 function onStaticSaved() {
   showStaticDialog.value = false;
 }
@@ -603,20 +548,22 @@ function confirmDeleteStatic(staticId: string) {
     message: '確定要刪除這筆統計記錄嗎？',
     cancel: true,
     persistent: true,
-  }).onOk(async () => {
-    try {
-      await babyStaticsStore.deleteBabyStatic(staticId);
-      $q.notify({
-        type: 'positive',
-        message: '記錄已刪除',
-      });
-    } catch (err) {
-      console.error('Delete static error:', err);
-      $q.notify({
-        type: 'negative',
-        message: '刪除失敗，請稍後再試',
-      });
-    }
+  }).onOk(() => {
+    void (async () => {
+      try {
+        await babyStaticsStore.deleteBabyStatic(staticId);
+        $q.notify({
+          type: 'positive',
+          message: '記錄已刪除',
+        });
+      } catch (err) {
+        console.error('Delete static error:', err);
+        $q.notify({
+          type: 'negative',
+          message: '刪除失敗，請稍後再試',
+        });
+      }
+    })();
   });
 }
 
@@ -634,7 +581,7 @@ function createChart(
       datasets: [
         {
           label: label,
-          data: data as any,
+          data: data as unknown as number[],
           borderColor: color,
           backgroundColor: color + '20',
           pointBackgroundColor: color, // 設定點的背景色為實心
@@ -655,7 +602,7 @@ function createChart(
           time: {
             unit: 'day',
             displayFormats: {
-              day: 'YYYY/MM/dd',
+              day: 'yyyy/MM/dd',
             },
           },
           title: {
@@ -683,9 +630,26 @@ function createChart(
 }
 
 function updateCharts() {
-  if (!baby.value || !babyStatics.value.length) return;
+  if (!baby.value) return;
 
-  nextTick(() => {
+  void nextTick(() => {
+    // 如果沒有統計資料，清理現有圖表
+    if (!babyStatics.value.length) {
+      if (heightChartInstance.value) {
+        heightChartInstance.value.destroy();
+        heightChartInstance.value = undefined;
+      }
+      if (weightChartInstance.value) {
+        weightChartInstance.value.destroy();
+        weightChartInstance.value = undefined;
+      }
+      if (headChartInstance.value) {
+        headChartInstance.value.destroy();
+        headChartInstance.value = undefined;
+      }
+      return;
+    }
+
     // 準備圖表資料
     const sortedData = [...babyStatics.value].sort(
       (a, b) => new Date(a.created_time).getTime() - new Date(b.created_time).getTime(),
@@ -719,42 +683,66 @@ function updateCharts() {
     if (heightChart.value) {
       if (heightChartInstance.value) {
         heightChartInstance.value.destroy();
+        heightChartInstance.value = undefined;
       }
-      heightChartInstance.value = createChart(
-        heightChart.value,
-        '身高',
-        heightData,
-        '#2196F3',
-        '身高 (cm)',
-      );
+      // 確保 canvas 已清理
+      const heightCtx = heightChart.value.getContext('2d');
+      if (heightCtx) {
+        heightCtx.clearRect(0, 0, heightChart.value.width, heightChart.value.height);
+      }
+      if (heightData.length > 0) {
+        heightChartInstance.value = createChart(
+          heightChart.value,
+          '身高',
+          heightData,
+          '#2196F3',
+          '身高 (cm)',
+        );
+      }
     }
 
     // 更新或創建體重圖表
     if (weightChart.value) {
       if (weightChartInstance.value) {
         weightChartInstance.value.destroy();
+        weightChartInstance.value = undefined;
       }
-      weightChartInstance.value = createChart(
-        weightChart.value,
-        '體重',
-        weightData,
-        '#4CAF50',
-        '體重 (kg)',
-      );
+      // 確保 canvas 已清理
+      const weightCtx = weightChart.value.getContext('2d');
+      if (weightCtx) {
+        weightCtx.clearRect(0, 0, weightChart.value.width, weightChart.value.height);
+      }
+      if (weightData.length > 0) {
+        weightChartInstance.value = createChart(
+          weightChart.value,
+          '體重',
+          weightData,
+          '#4CAF50',
+          '體重 (kg)',
+        );
+      }
     }
 
     // 更新或創建頭圍圖表
     if (headChart.value) {
       if (headChartInstance.value) {
         headChartInstance.value.destroy();
+        headChartInstance.value = undefined;
       }
-      headChartInstance.value = createChart(
-        headChart.value,
-        '頭圍',
-        headData,
-        '#FF9800',
-        '頭圍 (cm)',
-      );
+      // 確保 canvas 已清理
+      const headCtx = headChart.value.getContext('2d');
+      if (headCtx) {
+        headCtx.clearRect(0, 0, headChart.value.width, headChart.value.height);
+      }
+      if (headData.length > 0) {
+        headChartInstance.value = createChart(
+          headChart.value,
+          '頭圍',
+          headData,
+          '#FF9800',
+          '頭圍 (cm)',
+        );
+      }
     }
   });
 }
@@ -785,6 +773,22 @@ onMounted(async () => {
     error.value = '載入資料失敗';
   } finally {
     loading.value = false;
+  }
+});
+
+// 清理圖表實例
+onUnmounted(() => {
+  if (heightChartInstance.value) {
+    heightChartInstance.value.destroy();
+    heightChartInstance.value = undefined;
+  }
+  if (weightChartInstance.value) {
+    weightChartInstance.value.destroy();
+    weightChartInstance.value = undefined;
+  }
+  if (headChartInstance.value) {
+    headChartInstance.value.destroy();
+    headChartInstance.value = undefined;
   }
 });
 

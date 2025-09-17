@@ -99,7 +99,7 @@
                 color="primary"
                 @click.stop="openStaticDialog(baby)"
               >
-                <q-tooltip>資料紀錄</q-tooltip>
+                <q-tooltip>數據紀錄</q-tooltip>
               </q-btn>
               <q-btn flat round dense icon="edit" size="sm" @click.stop="editBaby(baby)">
                 <q-tooltip>編輯寶寶</q-tooltip>
