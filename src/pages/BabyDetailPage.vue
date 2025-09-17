@@ -23,10 +23,10 @@
     <!-- 主要內容 -->
     <div v-else-if="baby" class="row q-gutter-y-lg">
       <!-- 左側：基本資料 -->
-      <div class="col-12 col-md-3">
+      <div class="col-12 col-md-4">
         <q-card class="q-pa-md">
           <q-card-section>
-            <div class="row justify-between text-h6 q-mb-md">
+            <div class="row justify-between no-wrap text-h6 q-mb-md">
               <span>
                 <q-icon name="child_friendly" class="q-mr-sm" />
                 基本資料

@@ -22,7 +22,7 @@
     </div>
 
     <!-- 登入後的左右排版 -->
-    <div v-else class="row items-center" style="gap: 16px">
+    <div v-else class="row justify-center" style="gap: 16px">
       <!-- 左側：歡迎區域 -->
       <div class="col-12 col-md-7">
         <q-card flat bordered>
